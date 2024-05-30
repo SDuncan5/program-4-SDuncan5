@@ -1,0 +1,5 @@
+Demonstration of handling a mesh with no normals included in default execution, 
+the mesh with no normals is the only bunny in the scene, located behind the initial camera in the distance.
+The bunny is also the mesh that changes color when pressing "m".
+
+The wolf is texture mapped, but the texture doesn't fit too well. (Definitely going to figure out the original)
