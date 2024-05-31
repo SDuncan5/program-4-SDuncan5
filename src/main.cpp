@@ -25,6 +25,86 @@
 using namespace std;
 using namespace glm;
 
+double get_last_elapsed_time()
+{
+	static double lasttime = glfwGetTime();
+	double actualtime = glfwGetTime();
+	double difference = actualtime - lasttime;
+	lasttime = actualtime;
+	return difference;
+}
+class camera
+{
+public:
+	glm::vec3 pos;
+	glm::vec3 front;
+	glm::vec3 up;
+	float pitch;
+	float yaw;
+	float rotAngle;
+	int w, a, s, d;
+	camera()
+	{
+		w = a = s = d = 0;
+		rotAngle = 0.0;
+		pitch = 0;
+		yaw = 0;
+		pos = glm::vec3(0, 0, 0);
+		front = glm::vec3(0, 0, -1);
+		up = glm::vec3(0, 1, 0);
+	}
+	glm::mat4 process(double ftime)
+	{
+		float speed = 0;
+		if (w == 1)
+		{
+			speed = 10 * ftime;
+			pos = pos + speed * front;
+		}
+		else if (s == 1)
+		{
+			speed = -10 * ftime;
+			pos = pos + speed * front;
+		}
+		//float yangle=0;
+		if (a == 1) {
+			speed = -10 * ftime;
+			pos = pos + speed * normalize(cross(front, up));
+			//yangle = -3 * ftime;
+		}
+		else if (d == 1) {
+			//yangle = 3 * ftime;
+			speed = 10 * ftime;
+			pos = pos + speed * normalize(cross(front, up));
+		}
+
+		//float front_y = sin(radians(pitch));
+		//if (front_y < 80 && front_y > -80) {
+		//	front.y = sin(radians(pitch));
+		//}
+		front.x = cos(radians(yaw)) * cos(radians(pitch));
+		front.y = -1 * sin(radians(pitch));
+		front.z = sin(radians(yaw)) * cos(radians(pitch));
+
+
+		/*rotAngle += yangle;
+		glm::mat4 R = glm::rotate(glm::mat4(1), rotAngle, glm::vec3(0, 1, 0));
+		glm::vec4 dir = glm::vec4(0, 0, speed,1);
+		dir = dir*R;
+		pos += glm::vec3(dir.x, dir.y, dir.z);
+		glm::mat4 T = glm::translate(glm::mat4(1), pos); */
+		//return R * T;
+
+
+		// front is pos + front (front = (0, 0, -1)
+		//return glm::lookAt(pos, vec3(dir.x, dir.y, dir.z), vec3(0, 1, 0));
+		return glm::lookAt(pos, pos + front, up);
+
+	}
+};
+
+camera mycam;
+
 class Application : public EventCallbacks
 {
 
@@ -32,11 +112,14 @@ public:
 
 	WindowManager * windowManager = nullptr;
 
-	// Our shader program - use this one for Blinn-Phong
-	std::shared_ptr<Program> prog;
+	//// Our shader program - use this one for Blinn-Phong
+	//std::shared_ptr<Program> prog;
 
-	//Our shader program for textures
-	std::shared_ptr<Program> texProg;
+	////Our shader program for textures
+	//std::shared_ptr<Program> texProg;
+
+	// our shader programs
+	std::shared_ptr<Program> prog, texProg, skyProg;
 
 	//our geometry
 	shared_ptr<Shape> sphere;
@@ -56,8 +139,8 @@ public:
 	GLuint GroundVertexArrayID;
 
 	//the image to use as a texture (ground)
-	shared_ptr<Texture> texture0;
-	shared_ptr<Texture> textureWolf;
+	shared_ptr<Texture> texture0, textureWolf, texture1, textureDaySky, textureNightSky;
+	//shared_ptr<Texture> textureWolf;
 
 	//global data (larger program should be encapsulated)
 	vec3 gMin;
@@ -67,6 +150,7 @@ public:
 	float lightTrans = 0;
 	float gTrans = -3;
 	float sTheta = 0;
+	float skyTheta = 0;
 	float eTheta = 0;
 	float hTheta = 0;
 	float materialType = 0;
@@ -86,20 +170,55 @@ public:
 		{
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
-		//update global camera rotate
-		if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-			gRot -= 0.2;
+		////update global camera rotate
+		//if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+		//	gRot -= 0.2;
+		//}
+		//if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+		//	gRot += 0.2;
+		//}
+		////update camera height
+		//if (key == GLFW_KEY_S && action == GLFW_PRESS){
+		//	gCamH  += 0.25;
+		//}
+		//if (key == GLFW_KEY_F && action == GLFW_PRESS){
+		//	gCamH  -= 0.25;
+		//}
+		
+		// moves camera w/ wasd
+		if (key == GLFW_KEY_W && action == GLFW_PRESS)
+		{
+			mycam.w = 1;
 		}
-		if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-			gRot += 0.2;
+		if (key == GLFW_KEY_W && action == GLFW_RELEASE)
+		{
+			mycam.w = 0;
 		}
-		//update camera height
-		if (key == GLFW_KEY_S && action == GLFW_PRESS){
-			gCamH  += 0.25;
+		if (key == GLFW_KEY_S && action == GLFW_PRESS)
+		{
+			mycam.s = 1;
 		}
-		if (key == GLFW_KEY_F && action == GLFW_PRESS){
-			gCamH  -= 0.25;
+		if (key == GLFW_KEY_S && action == GLFW_RELEASE)
+		{
+			mycam.s = 0;
 		}
+		if (key == GLFW_KEY_A && action == GLFW_PRESS)
+		{
+			mycam.a = 1;
+		}
+		if (key == GLFW_KEY_A && action == GLFW_RELEASE)
+		{
+			mycam.a = 0;
+		}
+		if (key == GLFW_KEY_D && action == GLFW_PRESS)
+		{
+			mycam.d = 1;
+		}
+		if (key == GLFW_KEY_D && action == GLFW_RELEASE)
+		{
+			mycam.d = 0;
+		}
+
 
 		if (key == GLFW_KEY_Q && action == GLFW_PRESS){
 			lightTrans += 0.25;
@@ -131,6 +250,15 @@ public:
 		}
 	}
 
+	void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) {
+		cout << "xDel + yDel " << deltaX << " " << deltaY << endl;
+		//fill in for game camera
+		float new_pitch = mycam.pitch + deltaY * 0.9;
+		if (new_pitch <= 80 && new_pitch >= -80) //only update if within bounds
+			mycam.pitch = new_pitch;
+		mycam.yaw = mycam.yaw + deltaX * 1;
+	}
+
 	void resizeCallback(GLFWwindow *window, int width, int height)
 	{
 		glViewport(0, 0, width, height);
@@ -153,6 +281,7 @@ public:
 		prog->addUniform("P");
 		prog->addUniform("V");
 		prog->addUniform("M");
+		prog->addUniform("flip");
 		prog->addUniform("MatAmb");
 		prog->addUniform("MatDif");
 		prog->addUniform("MatSpec");
@@ -160,6 +289,8 @@ public:
 		prog->addUniform("lightPos");
 		prog->addAttribute("vertPos");
 		prog->addAttribute("vertNor");
+		prog->addAttribute("vertTex");
+
 
 		// Initialize the GLSL program that we will use for texture mapping
 		texProg = make_shared<Program>();
@@ -169,11 +300,27 @@ public:
 		texProg->addUniform("P");
 		texProg->addUniform("V");
 		texProg->addUniform("M");
+		texProg->addUniform("flip");
 		texProg->addUniform("Texture0");
+		texProg->addUniform("MatShine");
 		texProg->addUniform("lightPos");
 		texProg->addAttribute("vertPos");
 		texProg->addAttribute("vertNor");
 		texProg->addAttribute("vertTex");
+
+		skyProg = make_shared<Program>();
+		skyProg->setVerbose(true);
+		skyProg->setShaderNames(resourceDirectory + "/skyvertex.glsl", resourceDirectory + "/skyfrag.glsl");
+		skyProg->init();
+		skyProg->addUniform("P");
+		skyProg->addUniform("V");
+		skyProg->addUniform("M");
+		skyProg->addUniform("tex");
+		skyProg->addUniform("tex2");
+		skyProg->addUniform("day_night_ratio");
+		skyProg->addAttribute("vertPos");
+		skyProg->addAttribute("vertNor");
+		skyProg->addAttribute("vertTex");
 
 		//read in a load the texture
 		texture0 = make_shared<Texture>();
@@ -188,6 +335,25 @@ public:
 		textureWolf->init();
 		textureWolf->setUnit(1);
 		textureWolf->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+
+		texture1 = make_shared<Texture>();
+		texture1->setFilename(resourceDirectory + "/cartoonSky.png");
+		texture1->init();
+		texture1->setUnit(2);
+		texture1->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+
+		textureDaySky = make_shared<Texture>();
+		textureDaySky->setFilename(resourceDirectory + "/sphere-day.jpg");
+		textureDaySky->init();
+		textureDaySky->setUnit(3);
+		textureDaySky->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+
+		textureNightSky = make_shared<Texture>();
+		textureNightSky->setFilename(resourceDirectory + "/nightsphere.jpg");
+		textureNightSky->init();
+		textureNightSky->setUnit(3);
+		textureNightSky->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+
 	}
 
 	void initGeom(const std::string& resourceDirectory)
@@ -200,7 +366,7 @@ public:
  		vector<tinyobj::material_t> objMaterials;
  		string errStr;
 		//load in the mesh and make the shape(s)
- 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/sphere.obj").c_str());
+ 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/sphereWTex.obj").c_str());
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
@@ -271,7 +437,7 @@ public:
 	//directly pass quad for the ground to the GPU
 	void initGround() {
 
-		float g_groundSize = 20;
+		float g_groundSize = 50;
 		float g_groundY = -0.25;
 
   		// A x-z plane at y = g_groundY of dimension [-g_groundSize, g_groundSize]^2
@@ -293,9 +459,9 @@ public:
 
 		static GLfloat GrndTex[] = {
       		0, 0, // back
-      		0, 1,
-      		1, 1,
-      		1, 0 };
+      		0, 50,
+      		50, 50,
+      		50, 0 };
 
       	unsigned short idx[] = {0, 1, 2, 0, 2, 3};
 
@@ -419,6 +585,8 @@ public:
    	}
 
 	void render() {
+		double frametime = get_last_elapsed_time();
+
 		// Get current frame buffer size.
 		int width, height;
 		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
@@ -432,26 +600,63 @@ public:
 
 		// Create the matrix stacks - please leave these alone for now
 		auto Projection = make_shared<MatrixStack>();
-		auto View = make_shared<MatrixStack>();
+		//auto View = make_shared<MatrixStack>();
+		mat4 View = mycam.process(frametime);
 		auto Model = make_shared<MatrixStack>();
 
 		// Apply perspective projection.
 		Projection->pushMatrix();
 		Projection->perspective(45.0f, aspect, 0.01f, 100.0f);
 
+		// sky shaders
+		skyProg->bind();
+
+		glm::mat4 ViewBox = glm::mat4(glm::mat3(View));
+
+		glUniformMatrix4fv(skyProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
+		glUniformMatrix4fv(skyProg->getUniform("V"), 1, GL_FALSE, value_ptr(ViewBox));
+		glUniformMatrix4fv(skyProg->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		//glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
+		//glUniform1f(texProg->getUniform("MatShine"), 27.9);
+
+		textureDaySky->bind(skyProg->getUniform("tex"));
+		textureNightSky->bind(skyProg->getUniform("tex2"));
+		//glUniform1f(skyProg->getUniform("day_night_ratio"), 0); 
+
+
+		//draw big background sphere
+		Model->pushMatrix();
+		// inside sphere, so want normals pointing in
+			glUniform1i(skyProg->getUniform("flip"), 1);
+			glUniform1f(skyProg->getUniform("day_night_ratio"), skyTheta);
+			Model->loadIdentity();
+			Model->scale(vec3(.5));
+			SetMaterial(skyProg, 1);
+			setModel(skyProg, Model);
+
+			glDisable(GL_DEPTH_TEST);
+			sphere->draw(skyProg);
+			glEnable(GL_DEPTH_TEST);
+
+		Model->popMatrix();
+
+		skyProg->unbind();
+
 		// View is global translation along negative z for now
-		View->pushMatrix();
-		View->loadIdentity();
-		//camera up and down
-		View->translate(vec3(0, gCamH, 0));
-		//global rotate (the whole scene )
-		View->rotate(gRot, vec3(0, 1, 0));
+		//View->pushMatrix();
+		//View->loadIdentity();
+		////camera up and down
+		//View->translate(vec3(0, gCamH, 0));
+		////global rotate (the whole scene )
+		//View->rotate(gRot, vec3(0, 1, 0));
 
 		// Draw the scene
 		prog->bind();
 		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
-		glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+		//glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+		glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, value_ptr(View));
 		glUniform3f(prog->getUniform("lightPos"), 2.0+lightTrans, 2.0, 2.9);
+		glUniform1i(prog->getUniform("flip"), 0); // flip normals if needed
 
 		// draw the array of bunnies
 		Model->pushMatrix();
@@ -557,12 +762,14 @@ public:
 		//switch shaders to the texture mapping shader and draw the ground
 		texProg->bind();
 		glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
-		glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+		//glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+		glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE, value_ptr(View));
 		glUniformMatrix4fv(texProg->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
+		glUniform1f(texProg->getUniform("MatShine"), 27.9);
+		glUniform1i(texProg->getUniform("flip"), 1);
 				
 
-		//draw the ground plane 
 		textureWolf->bind(texProg->getUniform("Texture0"));
 		Model->pushMatrix(); // T R S
 			Model->translate(vec3(-1, -1, -3));
@@ -584,19 +791,21 @@ public:
 			dog->draw(texProg);
 		Model->popMatrix(); */
 
+		//draw the ground plane 
 		drawGround(texProg);
 
 
 		texProg->unbind();
 		
 		//animation update example
+		skyTheta = sin(0.1 * glfwGetTime());
 		sTheta = sin(glfwGetTime());
 		eTheta = std::max(0.0f, (float)sin(glfwGetTime()));
 		hTheta = std::max(0.0f, (float)cos(glfwGetTime()));
 
 		// Pop matrix stacks.
 		Projection->popMatrix();
-		View->popMatrix();
+		//View->popMatrix();
 
 	}
 };
