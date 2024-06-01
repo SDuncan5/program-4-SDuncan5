@@ -18,11 +18,12 @@ void main() {
   /* First model transforms */
   gl_Position = P * V *M * vec4(vertPos.xyz, 1.0);
 
-  fragNor = (M * vec4(vertNor, 0.0)).xyz;
+  fragNor = (V*M * vec4(vertNor, 0.0)).xyz;
   //lightDir = vec3(V*(vec4(lightPos - (M*vec4(vertPos.xyz, 1.0)).xyz, 0.0)));
 
   //lightDir = vec3(V*(vec4(lightPos - (M*vec4(vertPos.xyz, 1.0)).xyz, 0.0)));
-  lightDir = lightPos - (M*vec4(vertPos.xyz, 1.0)).xyz;
+  lightDir = vec3(V*(vec4(lightPos - (M*vec4(vertPos.xyz, 0.0)).xyz, 0.0)));
+  //lightDir = lightPos - (V*M*vec4(vertPos.xyz, 1.0)).xyz;
 
   /* pass through the texture coordinates to be interpolated */
   vTexCoord = vertTex;

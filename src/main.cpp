@@ -253,10 +253,10 @@ public:
 	void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) {
 		cout << "xDel + yDel " << deltaX << " " << deltaY << endl;
 		//fill in for game camera
-		float new_pitch = mycam.pitch + deltaY * 0.9;
+		float new_pitch = mycam.pitch + deltaY * 1.5;
 		if (new_pitch <= 80 && new_pitch >= -80) //only update if within bounds
 			mycam.pitch = new_pitch;
-		mycam.yaw = mycam.yaw + deltaX * 1;
+		mycam.yaw = mycam.yaw + deltaX * 1.5;
 	}
 
 	void resizeCallback(GLFWwindow *window, int width, int height)
@@ -302,7 +302,7 @@ public:
 		texProg->addUniform("M");
 		texProg->addUniform("flip");
 		texProg->addUniform("Texture0");
-		texProg->addUniform("MatShine");
+		//texProg->addUniform("MatShine");
 		texProg->addUniform("lightPos");
 		texProg->addAttribute("vertPos");
 		texProg->addAttribute("vertNor");
@@ -351,7 +351,7 @@ public:
 		textureNightSky = make_shared<Texture>();
 		textureNightSky->setFilename(resourceDirectory + "/nightsphere.jpg");
 		textureNightSky->init();
-		textureNightSky->setUnit(3);
+		textureNightSky->setUnit(4);
 		textureNightSky->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
 	}
@@ -459,9 +459,9 @@ public:
 
 		static GLfloat GrndTex[] = {
       		0, 0, // back
-      		0, 50,
-      		50, 50,
-      		50, 0 };
+      		0, 30,
+      		30, 30,
+      		30, 0 };
 
       	unsigned short idx[] = {0, 1, 2, 0, 2, 3};
 
@@ -627,11 +627,10 @@ public:
 		//draw big background sphere
 		Model->pushMatrix();
 		// inside sphere, so want normals pointing in
-			glUniform1i(skyProg->getUniform("flip"), 1);
+			//glUniform1i(skyProg->getUniform("flip"), 1);
 			glUniform1f(skyProg->getUniform("day_night_ratio"), skyTheta);
 			Model->loadIdentity();
 			Model->scale(vec3(.5));
-			SetMaterial(skyProg, 1);
 			setModel(skyProg, Model);
 
 			glDisable(GL_DEPTH_TEST);
@@ -766,10 +765,9 @@ public:
 		glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE, value_ptr(View));
 		glUniformMatrix4fv(texProg->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
-		glUniform1f(texProg->getUniform("MatShine"), 27.9);
+		//glUniform1f(texProg->getUniform("MatShine"), 27.9);
 		glUniform1i(texProg->getUniform("flip"), 1);
 				
-
 		textureWolf->bind(texProg->getUniform("Texture0"));
 		Model->pushMatrix(); // T R S
 			Model->translate(vec3(-1, -1, -3));
@@ -779,6 +777,11 @@ public:
 			setModel(texProg, Model);
 			wolf->draw(texProg);
 		Model->popMatrix();
+
+		glUniform1i(texProg->getUniform("flip"), 0);
+
+		drawGround(texProg);
+
 
 		// draw the dog
 		/*texture0->bind(texProg->getUniform("Texture0"));
@@ -792,13 +795,12 @@ public:
 		Model->popMatrix(); */
 
 		//draw the ground plane 
-		drawGround(texProg);
-
 
 		texProg->unbind();
 		
 		//animation update example
 		skyTheta = sin(0.1 * glfwGetTime());
+		//skyTheta = sin(glfwGetTime());
 		sTheta = sin(glfwGetTime());
 		eTheta = std::max(0.0f, (float)sin(glfwGetTime()));
 		hTheta = std::max(0.0f, (float)cos(glfwGetTime()));

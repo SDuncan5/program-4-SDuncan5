@@ -6,6 +6,7 @@ uniform vec3 MatAmb;
 uniform vec3 MatDif;
 uniform vec3 MatSpec;
 uniform float MatShine;
+uniform int flip;
 
 //interpolated normal and light vector in camera space
 in vec3 fragNor;
@@ -17,6 +18,9 @@ void main()
 {
 	//you will need to work with these for lighting
 	vec3 normal = normalize(fragNor);
+	if (flip == 1) {
+		normal = normal * -1.0f;
+	}
 	vec3 light = normalize(lightDir);
 
 	float dC = clamp(dot(normal, light), 0, 1);
