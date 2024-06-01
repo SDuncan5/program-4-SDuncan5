@@ -327,7 +327,7 @@ public:
   		texture0->setFilename(resourceDirectory + "/grass.jpg");
   		texture0->init();
   		texture0->setUnit(0);
-  		texture0->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+  		texture0->setWrapModes(GL_REPEAT, GL_REPEAT);
 
 		textureWolf = make_shared<Texture>();
 		//textureWolf->setFilename(resourceDirectory + "/wolf_objs/wolf_difuse_001.tga.png");
