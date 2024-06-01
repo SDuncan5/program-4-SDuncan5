@@ -240,6 +240,10 @@ public:
 			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 		}
 
+		if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+			cout << "Cam pos: X:" << mycam.pos.x << " Y: " << mycam.pos.y << " Z: " << mycam.pos.z << endl;
+		}
+
 		// bezier curve time
 		if (key == GLFW_KEY_G && action == GLFW_RELEASE) {
 			goCamera = !goCamera;
@@ -371,8 +375,11 @@ public:
 		textureNightSky->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
 		// init splines up and down
-		splinepath[0] = Spline(glm::vec3(-6, 0, 5), glm::vec3(-1, -5, 5), glm::vec3(1, 5, 5), glm::vec3(2, 0, 5), 5);
-		splinepath[1] = Spline(glm::vec3(2, 0, 5), glm::vec3(3, -2, 5), glm::vec3(-0.25, 0.25, 5), glm::vec3(0, 0, 5), 5);
+		//splinepath[0] = Spline(glm::vec3(-6, 0, 5), glm::vec3(-1, -5, 5), glm::vec3(1, 5, 5), glm::vec3(2, 0, 5), 5);
+		//splinepath[1] = Spline(glm::vec3(2, 0, 5), glm::vec3(3, -2, 5), glm::vec3(-0.25, 0.25, 5), glm::vec3(0, 0, 5), 5);
+		//splinepath[0] = Spline(glm::vec3(-10.8, 5.1, 5.9), glm::vec3(-11, 7.55, 0.48), glm::vec3(-8.8, 4.4, -5), 5);
+		splinepath[0] = Spline(glm::vec3(-5.76, 2.34, 4.85), glm::vec3(-8.78, 4.33, -2.9), glm::vec3(-3.02, 2.08, -5.54), 3);
+		splinepath[1] = Spline(glm::vec3(-3.02, 2.08, -5.54), glm::vec3(-2.4, 1.09, 8), glm::vec3(1.34, 1.6, -3.3), glm::vec3(8.3, 7.7, -7.85), 5);
 
 	}
 
