@@ -6,8 +6,9 @@
     ]
   },
   "ExpandedNodes": [
-    ""
+    "",
+    "\\build"
   ],
-  "SelectedNode": "\\P4Base.sln",
+  "SelectedNode": "\\build\\P4Base.sln",
   "PreviewInSolutionExplorer": false
 }

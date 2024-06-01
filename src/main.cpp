@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <glad/glad.h>
+#include <chrono>
 
 #include "GLSL.h"
 #include "Program.h"
@@ -14,9 +15,12 @@
 #include "Model.h"
 #include "WindowManager.h"
 #include "Texture.h"
+#include "Bezier.h"
+#include "Spline.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader/tiny_obj_loader.h>
+#define PI 3.1415927
 
 // value_ptr for glm
 #include <glm/gtc/type_ptr.hpp>
@@ -156,6 +160,9 @@ public:
 	float materialType = 0;
 	float numMaterials = 3;
 
+	Spline splinepath[2];
+	bool goCamera = false;
+
 	float cocoStartTime = glfwGetTime();
 	float cocoStartWaitTime;
 	bool cocoOnGround = false;
@@ -233,6 +240,12 @@ public:
 			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 		}
 
+		// bezier curve time
+		if (key == GLFW_KEY_G && action == GLFW_RELEASE) {
+			goCamera = !goCamera;
+			cout << "goCamera = " << goCamera << endl;
+		}
+
 		// update material
 		if (key == GLFW_KEY_M && action == GLFW_PRESS) {
 			materialType = fmod(materialType+1, numMaterials);
@@ -251,7 +264,7 @@ public:
 	}
 
 	void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) {
-		cout << "xDel + yDel " << deltaX << " " << deltaY << endl;
+		//cout << "xDel + yDel " << deltaX << " " << deltaY << endl;
 		//fill in for game camera
 		float new_pitch = mycam.pitch + deltaY * 1.5;
 		if (new_pitch <= 80 && new_pitch >= -80) //only update if within bounds
@@ -272,6 +285,7 @@ public:
 		glClearColor(.72f, .84f, 1.06f, 1.0f);
 		// Enable z-buffer test.
 		glEnable(GL_DEPTH_TEST);
+
 
 		// Initialize the GLSL program that we will use for local shading
 		prog = make_shared<Program>();
@@ -343,16 +357,22 @@ public:
 		texture1->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
 		textureDaySky = make_shared<Texture>();
-		textureDaySky->setFilename(resourceDirectory + "/sphere-day.jpg");
+		//textureDaySky->setFilename(resourceDirectory + "/sphere-day.jpg");
+		textureDaySky->setFilename(resourceDirectory + "/ocean_sky2.jpg");
 		textureDaySky->init();
 		textureDaySky->setUnit(3);
 		textureDaySky->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
 		textureNightSky = make_shared<Texture>();
-		textureNightSky->setFilename(resourceDirectory + "/nightsphere.jpg");
+		//textureNightSky->setFilename(resourceDirectory + "/nightsphere.jpg");
+		textureNightSky->setFilename(resourceDirectory + "/ocean_sky2.jpg");
 		textureNightSky->init();
 		textureNightSky->setUnit(4);
 		textureNightSky->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+
+		// init splines up and down
+		splinepath[0] = Spline(glm::vec3(-6, 0, 5), glm::vec3(-1, -5, 5), glm::vec3(1, 5, 5), glm::vec3(2, 0, 5), 5);
+		splinepath[1] = Spline(glm::vec3(2, 0, 5), glm::vec3(3, -2, 5), glm::vec3(-0.25, 0.25, 5), glm::vec3(0, 0, 5), 5);
 
 	}
 
@@ -584,8 +604,22 @@ public:
 		Model->popMatrix();
    	}
 
-	void render() {
-		double frametime = get_last_elapsed_time();
+	void updateUsingCameraPath(float frametime) {
+
+		if (goCamera) {
+			if (!splinepath[0].isDone()) {
+				splinepath[0].update(frametime);
+				mycam.pos = splinepath[0].getPosition();
+			}	
+			else {
+				splinepath[1].update(frametime);
+				mycam.pos = splinepath[1].getPosition();
+			}
+		}
+	}
+
+	void render(float frametime) {
+		//double frametime = get_last_elapsed_time();
 
 		// Get current frame buffer size.
 		int width, height;
@@ -603,6 +637,9 @@ public:
 		//auto View = make_shared<MatrixStack>();
 		mat4 View = mycam.process(frametime);
 		auto Model = make_shared<MatrixStack>();
+
+		//update the camera position
+		updateUsingCameraPath(frametime);
 
 		// Apply perspective projection.
 		Projection->pushMatrix();
@@ -838,11 +875,29 @@ int main(int argc, char *argv[])
 	application->init(resourceDir);
 	application->initGeom(resourceDir);
 
+	auto lastTime = chrono::high_resolution_clock::now();
+
 	// Loop until the user closes the window.
 	while (! glfwWindowShouldClose(windowManager->getHandle()))
 	{
+
+		// save current time for next frame
+		auto nextLastTime = chrono::high_resolution_clock::now();
+
+		// get time since last frame
+		float deltaTime =
+			chrono::duration_cast<std::chrono::microseconds>(
+				chrono::high_resolution_clock::now() - lastTime)
+			.count();
+		// convert microseconds (weird) to seconds (less weird)
+		deltaTime *= 0.000001;
+
+		// reset lastTime so that we can calculate the deltaTime
+		// on the next frame
+		lastTime = nextLastTime;
+
 		// Render scene.
-		application->render();
+		application->render(deltaTime);
 
 		// Swap front and back buffers.
 		glfwSwapBuffers(windowManager->getHandle());
